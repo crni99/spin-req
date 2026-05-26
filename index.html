@@ -844,12 +844,12 @@
       </div>
       <div class="feature">
         <div class="feature-icon">⏱️</div>
-        <div class="feature-label">Party timer</div>
+        <div class="feature-label">Party Timer</div>
         Session duration control
       </div>
       <div class="feature">
         <div class="feature-icon">✅</div>
-        <div class="feature-label">Approve / Deny</div>
+        <div class="feature-label">Approve / Reject</div>
         The DJ decides what is played
       </div>
       <div class="feature">
@@ -868,12 +868,12 @@
       <h2>New party</h2>
       <p>Fill in the details and share the link with your guests</p>
       <div class="form-group">
-        <label>Party name</label>
-        <input type="text" id="inp-name" placeholder="House Music All Night Long" maxlength="60" />
+        <label>Party name *</label>
+        <input type="text" id="inp-name" placeholder="House Music All Night Long" maxlength="60" autocomplete="off" />
       </div>
       <div class="form-group">
         <label>Your DJ name (optional)</label>
-        <input type="text" id="inp-dj" placeholder="DJ Ognjen" maxlength="40" />
+        <input type="text" id="inp-dj" placeholder="DJ Ognjen" maxlength="40" autocomplete="off" />
       </div>
       <div class="form-group">
         <label>Party duration</label>
@@ -911,7 +911,7 @@
           <button class="copy-btn" onclick="copyLink()">Copy</button>
         </div>
         <button class="btn-primary" onclick="extendParty()">+30 min</button>
-        <button class="btn-secondary" onclick="endParty()" id="btn-zavrsi">End party</button>
+        <button class="btn-secondary" onclick="endParty()" id="btn-end-party">End party</button>
         <button class="btn-secondary" onclick="exportTxt()">📋 Export TXT</button>
       </div>
     </div>
@@ -926,7 +926,7 @@
           <div class="req-list" id="dj-pending-list">
             <div class="empty">
               <div class="empty-icon">🎵</div>
-              No Requests yet
+              No requests yet
             </div>
           </div>
         </div>
@@ -975,7 +975,7 @@
         <h3>Request a song</h3>
         <p>Send a request to the DJ — he decides whether to play it</p>
         <div class="input-row">
-          <input type="text" id="inp-song" placeholder="Artist — Song title" maxlength="100" />
+          <input type="text" id="inp-song" placeholder="Artist — Song title" maxlength="100" autocomplete="off" />
           <button class="btn-primary" onclick="sendRequest()" id="btn-send">Send</button>
         </div>
         <div class="quota-info">
@@ -1025,7 +1025,7 @@
 
     function handleRoute() {
       const params = new URLSearchParams(window.location.search);
-      const partyId = params.get('z');
+      const partyId = params.get('p');
       const isDj = params.get('dj') === '1';
 
       if (partyId) {
@@ -1114,9 +1114,9 @@
       }
     }
 
-    function renderDjLists(zahtevi) {
-      const pending = zahtevi.filter(z => p.status === 'pending');
-      const decided = zahtevi.filter(z => p.status !== 'pending');
+    function renderDjLists(requests) {
+      const pending = requests.filter(p => p.status === 'pending');
+      const decided = requests.filter(p => p.status !== 'pending');
 
       document.getElementById('dj-pending-count').textContent = pending.length + ' waiting';
       document.getElementById('dj-decided-count').textContent = decided.length + ' songs';
@@ -1125,7 +1125,7 @@
       if (pending.length === 0) {
         pList.innerHTML = '<div class="empty"><div class="empty-icon">🎵</div>No requests yet</div>';
       } else {
-        pList.innerHTML = pending.map((z, i) => `
+        pList.innerHTML = pending.map((p, i) => `
       <div class="req-card" id="req-${p.id}">
         <div class="req-number">${i + 1}</div>
         <div class="req-info">
@@ -1144,7 +1144,7 @@
       if (decided.length === 0) {
         dList.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>Playlist is empty</div>';
       } else {
-        dList.innerHTML = [...decided].reverse().map((z, i) => `
+        dList.innerHTML = [...decided].reverse().map((p, i) => `
       <div class="req-card">
         <div class="req-number">${decided.length - i}</div>
         <div class="req-info">
@@ -1173,6 +1173,7 @@
         .eq('id', currentParty.id).select().single();
       if (!error && data) {
         currentParty = data;
+        startTimer('dj-timer', data);
         toast('+30 minutes added ✓', 'success');
       }
     }
@@ -1203,7 +1204,7 @@
         '',
         '═══════════════════════════════',
         '',
-        ...allRequests.map((z, i) => {
+        ...allRequests.map((p, i) => {
           const status = p.status === 'accepted' ? '[ACCEPTED]' :
             p.status === 'rejected' ? '[REJECTED]' : '[ON HOLD]';
           return `${i + 1}. ${status} ${p.song}`;
@@ -1211,8 +1212,8 @@
         '',
         '═══════════════════════════════',
         `Total: ${allRequests.length} requests`,
-        `Accepted: ${allRequests.filter(z => p.status === 'accepted').length}`,
-        `Rejected: ${allRequests.filter(z => p.status === 'rejected').length}`,
+        `Accepted: ${allRequests.filter(p => p.status === 'accepted').length}`,
+        `Rejected: ${allRequests.filter(p => p.status === 'rejected').length}`,
       ].filter(l => l !== undefined).join('\n');
 
       const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' });
@@ -1224,7 +1225,9 @@
 
     function copyLink() {
       const url = buildUrl(currentParty.id, false);
-      navigator.clipboard.writeText(url).then(() => toast('Link copied! ✓', 'success'));
+      navigator.clipboard.writeText(url)
+        .then(() => toast('Link copied! ✓', 'success'))
+        .catch(() => toast('Could not copy, please copy manually', 'error'));
     }
 
     async function loadGuestView(partyId) {
@@ -1282,7 +1285,7 @@
       if (list.length === 0) {
         el.innerHTML = '<div class="empty"><div class="empty-icon">🎵</div>No songs accepted yet</div>';
       } else {
-        el.innerHTML = list.map((z, i) => `
+        el.innerHTML = list.map((p, i) => `
       <div class="req-card">
         <div class="req-number">${i + 1}</div>
         <div class="req-info">
@@ -1304,6 +1307,11 @@
         toast('The party is over!', 'error'); return;
       }
 
+      const btn = document.getElementById('btn-send');
+      btn.disabled = true;
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = '<span class="spinner"></span>';
+
       const ipHash = await getIpHash();
       const { count } = await supabaseClient
         .from('requests')
@@ -1312,12 +1320,11 @@
         .eq('ip_hash', ipHash);
 
       if ((count || 0) >= 3) {
-        toast('You have used all 3 requests!', 'error'); return;
+        toast('You have used all 3 requests!', 'error');
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        return;
       }
-
-      const btn = document.getElementById('btn-send');
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span>';
 
       const { error } = await supabaseClient.from('requests').insert({
         party_id: currentParty.id,
@@ -1327,7 +1334,7 @@
       });
 
       btn.disabled = false;
-      btn.innerHTML = 'Send';
+      btn.innerHTML = originalHtml;
 
       if (error) { toast('Error: ' + error.message, 'error'); return; }
 
@@ -1380,6 +1387,8 @@
         }, async (payload) => {
           const updated = payload.new;
           currentParty = { ...currentParty, ...updated };
+          if (role === 'dj') startTimer('dj-timer', currentParty);
+          else startTimer('guest-timer', currentParty);
           if (updated.ended && role === 'guest') showGuestEnded();
         })
         .subscribe();
@@ -1424,7 +1433,7 @@
 
     function buildUrl(partyId, isDj) {
       const base = window.location.origin + window.location.pathname;
-      return base + '?z=' + partyId + (isDj ? '&dj=1' : '');
+      return base + '?p=' + partyId + (isDj ? '&dj=1' : '');
     }
 
     function esc(str) {
