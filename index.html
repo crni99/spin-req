@@ -1397,6 +1397,7 @@
     function startTimer(elId, party) {
       clearInterval(timerInterval);
       const el = document.getElementById(elId);
+      const isDjTimer = elId === 'dj-timer';
 
       function tick() {
         if (!currentParty) return;
@@ -1408,6 +1409,13 @@
           el.textContent = 'ENDED';
           el.className = 'timer-badge ended';
           clearInterval(timerInterval);
+          if (isDjTimer && !currentParty.ended) {
+            supabaseClient
+              .from('parties')
+              .update({ ended: true })
+              .eq('id', currentParty.id)
+              .then(() => { currentParty.ended = true; });
+          }
           return;
         }
 
