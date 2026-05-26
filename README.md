@@ -1,8 +1,6 @@
 # spin-req
 
--- =============================================
---  CREATE TABLES
--- =============================================
+** SUPABASE SETUP
 
 create table if not exists parties (
   id              text primary key,
@@ -22,3 +20,11 @@ create table if not exists requests (
   status      text default 'pending',
   created_at  timestamptz default now()
 );
+
+alter publication supabase_realtime add table requests;
+alter publication supabase_realtime add table parties;
+
+alter table public.requests disable row level security;
+alter table public.parties disable row level security;
+
+create index if not exists requests_party_id_idx ON public.requests (party_id);
