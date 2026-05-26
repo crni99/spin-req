@@ -1,0 +1,1470 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpinReq — DJ Request App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap"
+    rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --bg2: #111118;
+      --bg3: #1a1a24;
+      --accent: #ff3c6e;
+      --accent2: #ff8c42;
+      --text: #f0eee8;
+      --text2: #888;
+      --text3: #555;
+      --border: rgba(255, 255, 255, 0.08);
+      --border2: rgba(255, 255, 255, 0.15);
+      --success: #2ecc71;
+      --danger: #e74c3c;
+      --warning: #f39c12;
+      --card-r: 16px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+    }
+
+    .page {
+      display: none;
+      position: relative;
+      z-index: 1;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    #page-landing {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .logo {
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(72px, 15vw, 140px);
+      line-height: 0.9;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 4px;
+      margin-bottom: 0.5rem;
+    }
+
+    .logo-sub {
+      font-size: 13px;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      color: var(--text2);
+      margin-bottom: 3rem;
+    }
+
+    .landing-desc {
+      max-width: 560px;
+      font-size: 18px;
+      color: var(--text2);
+      line-height: 1.7;
+      margin-bottom: 3rem;
+    }
+
+    .landing-desc strong {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .features {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .feature {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--card-r);
+      padding: 1.2rem 1.5rem;
+      font-size: 14px;
+      color: var(--text2);
+      max-width: 160px;
+      text-align: center;
+    }
+
+    .feature-icon {
+      font-size: 28px;
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-label {
+      color: var(--text);
+      font-weight: 500;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: white;
+      border: none;
+      padding: 1rem 2.5rem;
+      font-size: 16px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      border-radius: 50px;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: all 0.2s;
+      box-shadow: 0 4px 24px rgba(255, 60, 110, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(255, 60, 110, 0.4);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: var(--bg3);
+      color: var(--text);
+      border: 1px solid var(--border2);
+      padding: 0.75rem 1.5rem;
+      font-size: 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg2);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: var(--card-r);
+      padding: 2rem;
+      width: 100%;
+      max-width: 480px;
+      position: relative;
+    }
+
+    .modal h2 {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 32px;
+      letter-spacing: 2px;
+      margin-bottom: 0.25rem;
+      color: var(--text);
+    }
+
+    .modal p {
+      color: var(--text2);
+      font-size: 14px;
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      color: var(--text2);
+      font-size: 22px;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .modal-close:hover {
+      color: var(--text);
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text2);
+      margin-bottom: 0.5rem;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      border-color: var(--accent);
+    }
+
+    .form-group select option {
+      background: var(--bg3);
+    }
+
+    .app-header {
+      position: sticky;
+      top: 0;
+      background: rgba(10, 10, 15, 0.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      z-index: 50;
+      padding: 0 1.5rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-logo {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 28px;
+      letter-spacing: 3px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .timer-badge {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 4px 12px;
+      font-size: 16px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      font-family: 'Bebas Neue', cursive;
+      letter-spacing: 2px;
+    }
+
+    .timer-badge.warning {
+      border-color: var(--warning);
+      color: var(--warning);
+    }
+
+    .timer-badge.ended {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    #page-dj {
+      min-height: 100vh;
+    }
+
+    .dj-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      padding: 1.5rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 768px) {
+      .dj-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--card-r);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-title {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 22px;
+      letter-spacing: 2px;
+      color: var(--text);
+    }
+
+    .badge {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 12px;
+      color: var(--text2);
+    }
+
+    .badge.accent {
+      background: rgba(255, 60, 110, 0.15);
+      border-color: rgba(255, 60, 110, 0.3);
+      color: var(--accent);
+    }
+
+    .panel-body {
+      padding: 1rem;
+    }
+
+    .req-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .req-number {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--bg);
+      border: 1px solid var(--border2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text2);
+      flex-shrink: 0;
+    }
+
+    .req-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .req-song {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .req-meta {
+      font-size: 12px;
+      color: var(--text3);
+    }
+
+    .req-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .btn-accept {
+      background: rgba(46, 204, 113, 0.15);
+      border: 1px solid rgba(46, 204, 113, 0.3);
+      color: var(--success);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-accept:hover {
+      background: rgba(46, 204, 113, 0.25);
+    }
+
+    .btn-reject {
+      background: rgba(231, 76, 60, 0.15);
+      border: 1px solid rgba(231, 76, 60, 0.3);
+      color: var(--danger);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-reject:hover {
+      background: rgba(231, 76, 60, 0.25);
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    .chip.accepted {
+      background: rgba(46, 204, 113, 0.15);
+      color: var(--success);
+    }
+
+    .chip.rejected {
+      background: rgba(231, 76, 60, 0.15);
+      color: var(--danger);
+    }
+
+    .chip.pending {
+      background: rgba(243, 156, 18, 0.15);
+      color: var(--warning);
+    }
+
+    .chip::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text3);
+      font-size: 14px;
+    }
+
+    .empty-icon {
+      font-size: 40px;
+      margin-bottom: 1rem;
+      opacity: 0.4;
+    }
+
+    .dj-controls {
+      padding: 1.5rem;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--card-r);
+      margin: 1.5rem;
+      margin-top: 0;
+    }
+
+    .controls-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .controls-row .btn-primary {
+      padding: 0.65rem 1.5rem;
+      font-size: 14px;
+    }
+
+    .link-box {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .link-url {
+      flex: 1;
+      font-size: 13px;
+      color: var(--text2);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: monospace;
+    }
+
+    .copy-btn {
+      background: none;
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      color: var(--text2);
+      font-size: 12px;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .copy-btn:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    #page-guest {
+      min-height: 100vh;
+    }
+
+    .guest-layout {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+
+    .party-hero {
+      text-align: center;
+      padding: 2rem 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .party-hero-name {
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(36px, 8vw, 64px);
+      letter-spacing: 3px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+    }
+
+    .party-hero-dj {
+      font-size: 14px;
+      color: var(--text2);
+    }
+
+    .request-form {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--card-r);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .request-form h3 {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 22px;
+      letter-spacing: 2px;
+      margin-bottom: 0.25rem;
+    }
+
+    .request-form p {
+      font-size: 13px;
+      color: var(--text2);
+      margin-bottom: 1.25rem;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .input-row input {
+      flex: 1;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-row input:focus {
+      border-color: var(--accent);
+    }
+
+    .input-row input::placeholder {
+      color: var(--text3);
+    }
+
+    .input-row .btn-primary {
+      padding: 0.75rem 1.5rem;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .quota-info {
+      margin-top: 0.75rem;
+      font-size: 12px;
+      color: var(--text3);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .quota-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .quota-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border2);
+    }
+
+    .quota-dot.used {
+      background: var(--accent);
+    }
+
+    #toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      padding: 0.75rem 1.5rem;
+      font-size: 14px;
+      color: var(--text);
+      z-index: 200;
+      opacity: 0;
+      transition: all 0.3s;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    #toast.success {
+      border-color: rgba(46, 204, 113, 0.4);
+      color: var(--success);
+    }
+
+    #toast.error {
+      border-color: rgba(231, 76, 60, 0.4);
+      color: var(--danger);
+    }
+
+    .ended-banner {
+      background: rgba(231, 76, 60, 0.1);
+      border: 1px solid rgba(231, 76, 60, 0.3);
+      border-radius: var(--card-r);
+      padding: 1.5rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .ended-banner h3 {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 28px;
+      letter-spacing: 2px;
+      color: var(--danger);
+      margin-bottom: 0.5rem;
+    }
+
+    .ended-banner p {
+      font-size: 14px;
+      color: var(--text2);
+      margin-bottom: 1rem;
+    }
+
+    .req-list {
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .req-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .req-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .req-list::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 2px;
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 1rem 0;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+      display: inline-block;
+      margin-right: 6px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="page-landing" class="page active">
+    <div class="logo">SpinReq</div>
+    <div class="logo-sub">DJ Song Request Platform</div>
+
+    <p class="landing-desc">
+      Throw a party in seconds. Share the link with your guests.<br>
+      Accept or reject requests in real time.<br>
+      <strong>Without registration. No complications.</strong>
+    </p>
+
+    <div class="features">
+      <div class="feature">
+        <div class="feature-icon">🎵</div>
+        <div class="feature-label">Song Requests</div>
+        Guests send requests directly
+      </div>
+      <div class="feature">
+        <div class="feature-icon">⏱️</div>
+        <div class="feature-label">Party timer</div>
+        Session duration control
+      </div>
+      <div class="feature">
+        <div class="feature-icon">✅</div>
+        <div class="feature-label">Approve / Deny</div>
+        The DJ decides what is played
+      </div>
+      <div class="feature">
+        <div class="feature-icon">📋</div>
+        <div class="feature-label">TXT Export</div>
+        Download the list at the end
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="openCreateModal()">🎧 Create party</button>
+  </div>
+
+  <div id="modal-create" class="modal-overlay">
+    <div class="modal">
+      <button class="modal-close" onclick="closeCreateModal()">✕</button>
+      <h2>New party</h2>
+      <p>Fill in the details and share the link with your guests</p>
+      <div class="form-group">
+        <label>Party name</label>
+        <input type="text" id="inp-name" placeholder="House Music All Night Long" maxlength="60" />
+      </div>
+      <div class="form-group">
+        <label>Your DJ name (optional)</label>
+        <input type="text" id="inp-dj" placeholder="DJ Ognjen" maxlength="40" />
+      </div>
+      <div class="form-group">
+        <label>Party duration</label>
+        <select id="inp-duration">
+          <option value="30">30 minutes</option>
+          <option value="60" selected>1 hour</option>
+          <option value="90">1.5 hours</option>
+          <option value="120">2 hours</option>
+          <option value="180">3 hours</option>
+          <option value="240">4 hours</option>
+          <option value="300">5 hours</option>
+          <option value="360">6 hours</option>
+        </select>
+      </div>
+      <button class="btn-primary" style="width:100%" onclick="createParty()" id="btn-create">
+        🎉 Create party
+      </button>
+      <div id="create-error" style="margin-top:0.75rem; font-size:13px; color:var(--danger); display:none;"></div>
+    </div>
+  </div>
+
+  <div id="page-dj" class="page">
+    <div class="app-header">
+      <div class="header-logo">SpinReq</div>
+      <div class="header-info">
+        <div class="timer-badge" id="dj-timer">00:00:00</div>
+      </div>
+    </div>
+
+    <div class="dj-controls">
+      <div class="controls-row">
+        <div class="link-box">
+          <span style="font-size:12px; color:var(--text3);">🔗</span>
+          <span class="link-url" id="dj-link-url"></span>
+          <button class="copy-btn" onclick="copyLink()">Copy</button>
+        </div>
+        <button class="btn-primary" onclick="extendParty()">+30 min</button>
+        <button class="btn-secondary" onclick="endParty()" id="btn-zavrsi">End party</button>
+        <button class="btn-secondary" onclick="exportTxt()">📋 Export TXT</button>
+      </div>
+    </div>
+
+    <div class="dj-layout">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Requests</span>
+          <span class="badge accent" id="dj-pending-count">0 pending</span>
+        </div>
+        <div class="panel-body">
+          <div class="req-list" id="dj-pending-list">
+            <div class="empty">
+              <div class="empty-icon">🎵</div>
+              No Requests yet
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Playlist</span>
+          <span class="badge" id="dj-decided-count">0 songs</span>
+        </div>
+        <div class="panel-body">
+          <div class="req-list" id="dj-decided-list">
+            <div class="empty">
+              <div class="empty-icon">📋</div>
+              Playlist is empty
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-guest" class="page">
+    <div class="app-header">
+      <div class="header-logo">SpinReq</div>
+      <div class="header-info">
+        <div class="timer-badge" id="guest-timer">--:--:--</div>
+      </div>
+    </div>
+
+    <div class="guest-layout">
+      <div class="party-hero">
+        <div class="party-hero-name" id="guest-party-name"></div>
+        <div class="party-hero-dj" id="guest-dj-name"></div>
+        <div style="margin-top:0.75rem; font-size:13px; color:var(--text3);">
+          <span class="live-dot"></span> Party in progress
+        </div>
+      </div>
+
+      <div id="guest-ended-banner" style="display:none;" class="ended-banner">
+        <h3>🎤 Party ended!</h3>
+        <p>The DJ closed the session. Thanks for being part of the party!</p>
+      </div>
+
+      <div class="request-form" id="guest-req-form">
+        <h3>Request a song</h3>
+        <p>Send a request to the DJ — he decides whether to play it</p>
+        <div class="input-row">
+          <input type="text" id="inp-song" placeholder="Artist — Song title" maxlength="100" />
+          <button class="btn-primary" onclick="sendRequest()" id="btn-send">Send</button>
+        </div>
+        <div class="quota-info">
+          <div class="quota-dots" id="quota-dots">
+            <div class="quota-dot" id="dot-1"></div>
+            <div class="quota-dot" id="dot-2"></div>
+            <div class="quota-dot" id="dot-3"></div>
+          </div>
+          <span id="quota-text">You can send 3 more requests</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Accepted songs</span>
+          <span class="badge" id="guest-accepted-count">0</span>
+        </div>
+        <div class="panel-body">
+          <div class="req-list" id="guest-accepted-list">
+            <div class="empty">
+              <div class="empty-icon">🎵</div>
+              No songs accepted yet
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    const SUPABASE_URL = 'https://nygqnsqcivgkidsesewv.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_GzsSZRVMWehFVuRA7DWvOg_vpXr2N_W';
+
+    let supabaseClient = null;
+    let currentParty = null;
+    let timerInterval = null;
+    let realtimeChannel = null;
+    let allRequests = [];
+
+    function init() {
+      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      handleRoute();
+      window.addEventListener('popstate', handleRoute);
+    }
+
+    function handleRoute() {
+      const params = new URLSearchParams(window.location.search);
+      const partyId = params.get('z');
+      const isDj = params.get('dj') === '1';
+
+      if (partyId) {
+        if (isDj) loadDjView(partyId);
+        else loadGuestView(partyId);
+      } else {
+        showPage('page-landing');
+      }
+    }
+
+    function openCreateModal() {
+      document.getElementById('modal-create').classList.add('open');
+    }
+    function closeCreateModal() {
+      document.getElementById('modal-create').classList.remove('open');
+    }
+
+    async function createParty() {
+      const name = document.getElementById('inp-name').value.trim();
+      const djName = document.getElementById('inp-dj').value.trim();
+      const duration = parseInt(document.getElementById('inp-duration').value);
+
+      if (!name) { showCreateError('Enter the name of the party!'); return; }
+
+      const btn = document.getElementById('btn-create');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Creating...';
+
+      const id = genId();
+      const endTs = Date.now() + duration * 60 * 1000;
+
+      const { error } = await supabaseClient.from('parties').insert({
+        id, name, dj_name: djName || null,
+        duration_min: duration,
+        end_timestamp: endTs,
+        ended: false
+      });
+
+      btn.disabled = false;
+      btn.innerHTML = '🎉 Create party';
+
+      if (error) {
+        showCreateError('Error: ' + error.message);
+        return;
+      }
+
+      closeCreateModal();
+      const djUrl = buildUrl(id, true);
+      history.pushState({}, '', djUrl);
+      loadDjView(id);
+    }
+
+    function showCreateError(msg) {
+      const el = document.getElementById('create-error');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    async function loadDjView(partyId) {
+      const { data: party, error } = await supabaseClient
+        .from('parties').select('*').eq('id', partyId).single();
+      if (error || !party) { toast('Party not found!', 'error'); return; }
+
+      currentParty = party;
+      showPage('page-dj');
+
+      const guestUrl = buildUrl(partyId, false);
+      document.getElementById('dj-link-url').textContent = guestUrl;
+
+      startTimer('dj-timer', party);
+      await refreshDjLists();
+      subscribeRealtime(partyId, 'dj');
+      setTimeout(() => {
+        document.querySelector('#page-dj .dj-layout')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 150);
+    }
+
+    async function refreshDjLists() {
+      if (!currentParty) return;
+      const { data } = await supabaseClient
+        .from('requests').select('*').eq('party_id', currentParty.id)
+        .order('created_at', { ascending: true });
+      if (data) {
+        allRequests = data;
+        renderDjLists(data);
+      }
+    }
+
+    function renderDjLists(zahtevi) {
+      const pending = zahtevi.filter(z => p.status === 'pending');
+      const decided = zahtevi.filter(z => p.status !== 'pending');
+
+      document.getElementById('dj-pending-count').textContent = pending.length + ' waiting';
+      document.getElementById('dj-decided-count').textContent = decided.length + ' songs';
+
+      const pList = document.getElementById('dj-pending-list');
+      if (pending.length === 0) {
+        pList.innerHTML = '<div class="empty"><div class="empty-icon">🎵</div>No requests yet</div>';
+      } else {
+        pList.innerHTML = pending.map((z, i) => `
+      <div class="req-card" id="req-${p.id}">
+        <div class="req-number">${i + 1}</div>
+        <div class="req-info">
+          <div class="req-song">${esc(p.song)}</div>
+          <div class="req-meta">${timeAgo(p.created_at)}</div>
+        </div>
+        <div class="req-actions">
+          <button class="btn-accept" onclick="decide(${p.id}, 'accepted')">✓ Yes</button>
+          <button class="btn-reject" onclick="decide(${p.id}, 'rejected')">✗ No</button>
+        </div>
+      </div>
+    `).join('');
+      }
+
+      const dList = document.getElementById('dj-decided-list');
+      if (decided.length === 0) {
+        dList.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>Playlist is empty</div>';
+      } else {
+        dList.innerHTML = [...decided].reverse().map((z, i) => `
+      <div class="req-card">
+        <div class="req-number">${decided.length - i}</div>
+        <div class="req-info">
+          <div class="req-song">${esc(p.song)}</div>
+          <div class="req-meta">${timeAgo(p.created_at)}</div>
+        </div>
+        <span class="chip ${p.status === 'accepted' ? 'accepted' : 'rejected'}">
+          ${p.status === 'accepted' ? 'Accepted' : 'Rejected'}
+        </span>
+      </div>
+    `).join('');
+      }
+    }
+
+    async function decide(requestId, status) {
+      const { error } = await supabaseClient
+        .from('requests').update({ status }).eq('id', requestId);
+      if (!error) await refreshDjLists();
+    }
+
+    async function extendParty() {
+      if (!currentParty) return;
+      const newEnd = currentParty.end_timestamp + 30 * 60 * 1000;
+      const { data, error } = await supabaseClient
+        .from('parties').update({ end_timestamp: newEnd })
+        .eq('id', currentParty.id).select().single();
+      if (!error && data) {
+        currentParty = data;
+        toast('+30 minutes added ✓', 'success');
+      }
+    }
+
+    async function endParty() {
+      if (!currentParty) return;
+      if (!confirm('End the party? This cannot be undone.')) return;
+      const { error } = await supabaseClient
+        .from('parties').update({ ended: true }).eq('id', currentParty.id);
+      if (!error) {
+        currentParty.ended = true;
+        clearInterval(timerInterval);
+        document.getElementById('dj-timer').textContent = 'ENDED';
+        document.getElementById('dj-timer').className = 'timer-badge ended';
+        toast('The party is over!', 'success');
+      }
+    }
+
+    function exportTxt() {
+      if (!currentParty || allRequests.length === 0) {
+        toast('Nothing to export yet!', 'error');
+        return;
+      }
+      const lines = [
+        `SpinReq — ${currentParty.name}`,
+        currentParty.dj_name ? `DJ: ${currentParty.dj_name}` : '',
+        `Date: ${new Date().toLocaleDateString('en-US')}`,
+        '',
+        '═══════════════════════════════',
+        '',
+        ...allRequests.map((z, i) => {
+          const status = p.status === 'accepted' ? '[ACCEPTED]' :
+            p.status === 'rejected' ? '[REJECTED]' : '[ON HOLD]';
+          return `${i + 1}. ${status} ${p.song}`;
+        }),
+        '',
+        '═══════════════════════════════',
+        `Total: ${allRequests.length} requests`,
+        `Accepted: ${allRequests.filter(z => p.status === 'accepted').length}`,
+        `Rejected: ${allRequests.filter(z => p.status === 'rejected').length}`,
+      ].filter(l => l !== undefined).join('\n');
+
+      const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `spinreq-${currentParty.name.replace(/\s+/g, '_')}.txt`;
+      a.click();
+    }
+
+    function copyLink() {
+      const url = buildUrl(currentParty.id, false);
+      navigator.clipboard.writeText(url).then(() => toast('Link copied! ✓', 'success'));
+    }
+
+    async function loadGuestView(partyId) {
+      const { data: party, error } = await supabaseClient
+        .from('parties').select('*').eq('id', partyId).single();
+      if (error || !party) { toast('Party not found!', 'error'); return; }
+
+      currentParty = party;
+      showPage('page-guest');
+
+      document.getElementById('guest-party-name').textContent = party.name;
+      document.getElementById('guest-dj-name').textContent =
+        party.dj_name ? '🎧 ' + party.dj_name : '';
+
+      if (party.ended || Date.now() > party.end_timestamp) {
+        showGuestEnded();
+      } else {
+        startTimer('guest-timer', party);
+      }
+
+      await refreshGuestView();
+      subscribeRealtime(partyId, 'guest');
+      setTimeout(() => {
+        const target = party.ended || Date.now() > party.end_timestamp
+          ? document.getElementById('guest-ended-banner')
+          : document.getElementById('guest-req-form');
+        target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 150);
+    }
+
+    async function refreshGuestView() {
+      if (!currentParty) return;
+
+      const ipHash = await getIpHash();
+      const { count } = await supabaseClient
+        .from('requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('party_id', currentParty.id)
+        .eq('ip_hash', ipHash);
+
+      updateQuota(count || 0);
+
+      const { data } = await supabaseClient
+        .from('requests').select('*')
+        .eq('party_id', currentParty.id)
+        .eq('status', 'accepted')
+        .order('created_at', { ascending: false });
+
+      renderGuestAccepted(data || []);
+    }
+
+    function renderGuestAccepted(list) {
+      document.getElementById('guest-accepted-count').textContent = list.length;
+      const el = document.getElementById('guest-accepted-list');
+      if (list.length === 0) {
+        el.innerHTML = '<div class="empty"><div class="empty-icon">🎵</div>No songs accepted yet</div>';
+      } else {
+        el.innerHTML = list.map((z, i) => `
+      <div class="req-card">
+        <div class="req-number">${i + 1}</div>
+        <div class="req-info">
+          <div class="req-song">${esc(p.song)}</div>
+          <div class="req-meta">${timeAgo(p.created_at)}</div>
+        </div>
+        <span class="chip accepted">✓ Accepted</span>
+      </div>
+    `).join('');
+      }
+    }
+
+    async function sendRequest() {
+      if (!currentParty) return;
+      const song = document.getElementById('inp-song').value.trim();
+      if (!song) { toast('Enter the song title!', 'error'); return; }
+
+      if (currentParty.ended || Date.now() > currentParty.end_timestamp) {
+        toast('The party is over!', 'error'); return;
+      }
+
+      const ipHash = await getIpHash();
+      const { count } = await supabaseClient
+        .from('requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('party_id', currentParty.id)
+        .eq('ip_hash', ipHash);
+
+      if ((count || 0) >= 3) {
+        toast('You have used all 3 requests!', 'error'); return;
+      }
+
+      const btn = document.getElementById('btn-send');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>';
+
+      const { error } = await supabaseClient.from('requests').insert({
+        party_id: currentParty.id,
+        song,
+        ip_hash: ipHash,
+        status: 'pending'
+      });
+
+      btn.disabled = false;
+      btn.innerHTML = 'Send';
+
+      if (error) { toast('Error: ' + error.message, 'error'); return; }
+
+      document.getElementById('inp-song').value = '';
+      toast('Request sent! ✓', 'success');
+      await refreshGuestView();
+    }
+
+    function updateQuota(used) {
+      const remaining = 3 - used;
+      document.getElementById('quota-text').textContent =
+        remaining > 0 ? `${remaining} request${remaining === 1 ? '' : 's'} remaining` : 'No requests left.';
+
+      for (let i = 1; i <= 3; i++) {
+        document.getElementById('dot-' + i).className = 'quota-dot' + (i <= used ? ' used' : '');
+      }
+
+      if (remaining === 0) {
+        document.getElementById('btn-send').disabled = true;
+        document.getElementById('inp-song').disabled = true;
+      }
+    }
+
+    function showGuestEnded() {
+      document.getElementById('guest-ended-banner').style.display = 'block';
+      document.getElementById('guest-req-form').style.display = 'none';
+      document.getElementById('guest-timer').textContent = 'ENDED';
+      document.getElementById('guest-timer').className = 'timer-badge ended';
+      const liveDot = document.querySelector('.live-dot');
+      if (liveDot) liveDot.style.background = 'var(--danger)';
+      const liveText = liveDot?.nextSibling;
+      if (liveText) liveText.textContent = ' The party is over';
+    }
+
+    function subscribeRealtime(partyId, role) {
+      if (realtimeChannel) supabaseClient.removeChannel(realtimeChannel);
+
+      realtimeChannel = supabaseClient
+        .channel('party-' + partyId)
+        .on('postgres_changes', {
+          event: '*', schema: 'public', table: 'requests',
+          filter: 'party_id=eq.' + partyId
+        }, async () => {
+          if (role === 'dj') await refreshDjLists();
+          else await refreshGuestView();
+        })
+        .on('postgres_changes', {
+          event: 'UPDATE', schema: 'public', table: 'parties',
+          filter: 'id=eq.' + partyId
+        }, async (payload) => {
+          const updated = payload.new;
+          currentParty = { ...currentParty, ...updated };
+          if (updated.ended && role === 'guest') showGuestEnded();
+        })
+        .subscribe();
+    }
+
+    function startTimer(elId, party) {
+      clearInterval(timerInterval);
+      const el = document.getElementById(elId);
+
+      function tick() {
+        if (!currentParty) return;
+        const now = Date.now();
+        const end = currentParty.end_timestamp;
+        const diff = end - now;
+
+        if (currentParty.ended || diff <= 0) {
+          el.textContent = 'ENDED';
+          el.className = 'timer-badge ended';
+          clearInterval(timerInterval);
+          return;
+        }
+
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        el.textContent = [h, m, s].map(n => String(n).padStart(2, '0')).join(':');
+        el.className = 'timer-badge' + (diff < 5 * 60000 ? ' warning' : '');
+      }
+
+      tick();
+      timerInterval = setInterval(tick, 1000);
+    }
+
+    function showPage(id) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function genId() {
+      return Math.random().toString(36).slice(2, 8).toUpperCase();
+    }
+
+    function buildUrl(partyId, isDj) {
+      const base = window.location.origin + window.location.pathname;
+      return base + '?z=' + partyId + (isDj ? '&dj=1' : '');
+    }
+
+    function esc(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function timeAgo(ts) {
+      const diff = Math.floor((Date.now() - new Date(ts)) / 1000);
+      if (diff < 60) return diff + 's ago';
+      if (diff < 3600) return Math.floor(diff / 60) + 'min ago';
+      return Math.floor(diff / 3600) + 'h ago';
+    }
+
+    async function getIpHash() {
+      const raw = navigator.userAgent + Intl.DateTimeFormat().resolvedOptions().timeZone + window.screen.width;
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+      return Array.from(new Uint8Array(buf)).slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    let toastTimeout;
+    function toast(msg, type = '') {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = 'show ' + type;
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => { el.className = ''; }, 3000);
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        const activePage = document.querySelector('.page.active')?.id;
+        if (activePage === 'page-guest') sendRequest();
+      }
+      if (e.key === 'Escape') closeCreateModal();
+    });
+
+    init();
+
+  </script>
+
+</body>
+
+</html>
