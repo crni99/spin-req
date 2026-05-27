@@ -10,7 +10,7 @@ create table if not exists parties (
   end_timestamp   bigint not null,
   ended           boolean default false,
   created_at      timestamptz default now(),
-  dj_token text;
+  dj_token text
 );
 
 create table if not exists requests (
@@ -19,6 +19,7 @@ create table if not exists requests (
   song        text not null,
   ip_hash     text not null,
   status      text default 'pending',
+  sort_order  integer default 0,
   created_at  timestamptz default now()
 );
 

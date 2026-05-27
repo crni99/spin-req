@@ -42,7 +42,7 @@ async function refreshGuestView() {
         .from('requests').select('*')
         .eq('party_id', currentParty.id)
         .eq('status', 'accepted')
-        .order('created_at', { ascending: false });
+        .order('sort_order', { ascending: true });
 
     renderGuestAccepted(data || []);
 }
@@ -50,20 +50,26 @@ async function refreshGuestView() {
 function renderGuestAccepted(list) {
     document.getElementById('guest-accepted-count').textContent = list.length;
     const el = document.getElementById('guest-accepted-list');
+
     if (list.length === 0) {
         el.innerHTML = '<div class="empty"><div class="empty-icon">🎵</div>No songs accepted yet</div>';
-    } else {
-        el.innerHTML = list.map((p, i) => `
-      <div class="req-card">
-        <div class="req-number">${i + 1}</div>
-        <div class="req-info">
-          <div class="req-song">${esc(p.song)}</div>
-          <div class="req-meta">${timeAgo(p.created_at)}</div>
-        </div>
-        <span class="chip accepted">Accepted</span>
-      </div>
-    `).join('');
+        return;
     }
+
+    const newSignature = list.map(r => r.id + ':' + r.sort_order).join(',');
+    if (el.dataset.signature === newSignature) return;
+    el.dataset.signature = newSignature;
+
+    el.innerHTML = list.map((p, i) => `
+        <div class="req-card">
+            <div class="req-number">${i + 1}</div>
+            <div class="req-info">
+                <div class="req-song">${esc(p.song)}</div>
+                <div class="req-meta">${timeAgo(p.created_at)}</div>
+            </div>
+            <span class="chip accepted">Accepted</span>
+        </div>
+    `).join('');
 }
 
 async function sendRequest() {

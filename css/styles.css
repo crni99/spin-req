@@ -810,3 +810,88 @@ body::before {
     display: inline-block;
     margin-right: 6px;
 }
+
+.playlist-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.75rem;
+}
+
+.tab-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text2);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tab-btn:hover {
+    border-color: var(--border2);
+    color: var(--text);
+}
+
+.tab-btn.active.tab-accepted {
+    background: rgba(46, 204, 113, 0.15);
+    border-color: rgba(46, 204, 113, 0.4);
+    color: var(--success);
+}
+
+.tab-btn.active.tab-rejected {
+    background: rgba(231, 76, 60, 0.15);
+    border-color: rgba(231, 76, 60, 0.4);
+    color: var(--danger);
+}
+
+.tab-count {
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 11px;
+}
+
+.tab-hidden {
+    display: none;
+}
+
+.drag-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.drag-handle {
+    color: var(--text3);
+    font-size: 18px;
+    cursor: grab;
+    padding: 0 4px;
+    flex-shrink: 0;
+    user-select: none;
+    line-height: 1;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.draggable {
+    cursor: default;
+}
+
+.draggable.dragging {
+    opacity: 0.4;
+    border-style: dashed;
+}
+
+.draggable.drag-over {
+    border-color: var(--accent);
+    background: rgba(255, 60, 110, 0.08);
+}

@@ -75,54 +75,157 @@ async function refreshDjLists() {
     }
 }
 
+let activePlaylistTab = 'accepted';
+
 function renderDjLists(requests) {
     const pending = requests.filter(p => p.status === 'pending');
-    const decided = requests.filter(p => p.status !== 'pending');
+    const accepted = requests.filter(p => p.status === 'accepted')
+        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    const rejected = requests.filter(p => p.status === 'rejected')
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     document.getElementById('dj-pending-count').textContent = pending.length + ' waiting';
-    document.getElementById('dj-decided-count').textContent = decided.length + ' songs';
+    document.getElementById('dj-decided-count').textContent =
+        accepted.length + ' accepted · ' + rejected.length + ' rejected';
 
     const pList = document.getElementById('dj-pending-list');
     if (pending.length === 0) {
         pList.innerHTML = '<div class="empty"><div class="empty-icon">🎵</div>No requests yet</div>';
     } else {
         pList.innerHTML = pending.map((p, i) => `
-      <div class="req-card" id="req-${p.id}">
-        <div class="req-number">${i + 1}</div>
-        <div class="req-info">
-          <div class="req-song">${esc(p.song)}</div>
-          <div class="req-meta">${timeAgo(p.created_at)}</div>
-        </div>
-        <div class="req-actions">
-          <button class="btn-accept" onclick="decide(${p.id}, 'accepted')">✓ Yes</button>
-          <button class="btn-reject" onclick="decide(${p.id}, 'rejected')">✗ No</button>
-        </div>
-      </div>
-    `).join('');
+            <div class="req-card" id="req-${p.id}" data-id="${p.id}">
+                <div class="req-number">${i + 1}</div>
+                <div class="req-info">
+                    <div class="req-song">${esc(p.song)}</div>
+                    <div class="req-meta">${timeAgo(p.created_at)}</div>
+                </div>
+                <div class="req-actions">
+                    <button class="btn-accept" onclick="decide(${p.id}, 'accepted')">✓ Yes</button>
+                    <button class="btn-reject" onclick="decide(${p.id}, 'rejected')">✗ No</button>
+                </div>
+            </div>
+        `).join('');
     }
 
     const dList = document.getElementById('dj-decided-list');
-    if (decided.length === 0) {
-        dList.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>Playlist is empty</div>';
-    } else {
-        dList.innerHTML = [...decided].reverse().map((p, i) => `
-      <div class="req-card">
-        <div class="req-number">${decided.length - i}</div>
-        <div class="req-info">
-          <div class="req-song">${esc(p.song)}</div>
-          <div class="req-meta">${timeAgo(p.created_at)}</div>
+    dList.innerHTML = `
+        <div class="playlist-tabs">
+            <button class="tab-btn tab-accepted ${activePlaylistTab === 'accepted' ? 'active' : ''}"
+                onclick="switchPlaylistTab('accepted')">
+                ✓ Accepted <span class="tab-count">${accepted.length}</span>
+            </button>
+            <button class="tab-btn tab-rejected ${activePlaylistTab === 'rejected' ? 'active' : ''}"
+                onclick="switchPlaylistTab('rejected')">
+                ✗ Rejected <span class="tab-count">${rejected.length}</span>
+            </button>
         </div>
-        <span class="chip ${p.status === 'accepted' ? 'accepted' : 'rejected'}">
-          ${p.status === 'accepted' ? 'Accepted' : 'Rejected'}
-        </span>
-      </div>
-    `).join('');
+        <div id="tab-accepted" class="${activePlaylistTab === 'accepted' ? '' : 'tab-hidden'}">
+            ${accepted.length === 0
+            ? '<div class="empty"><div class="empty-icon">📋</div>No accepted songs yet</div>'
+            : `<div class="drag-list" id="drag-list">${accepted.map((p, i) => `
+                    <div class="req-card draggable" draggable="true" data-id="${p.id}" data-order="${p.sort_order || i}">
+                        <div class="drag-handle">⠿</div>
+                        <div class="req-number">${i + 1}</div>
+                        <div class="req-info">
+                            <div class="req-song">${esc(p.song)}</div>
+                            <div class="req-meta">${timeAgo(p.created_at)}</div>
+                        </div>
+                        <span class="chip accepted">Accepted</span>
+                    </div>
+                `).join('')}</div>`
+        }
+        </div>
+        <div id="tab-rejected" class="${activePlaylistTab === 'rejected' ? '' : 'tab-hidden'}">
+            ${rejected.length === 0
+            ? '<div class="empty"><div class="empty-icon">🚫</div>No rejected songs yet</div>'
+            : rejected.map((p, i) => `
+                    <div class="req-card">
+                        <div class="req-number">${i + 1}</div>
+                        <div class="req-info">
+                            <div class="req-song">${esc(p.song)}</div>
+                            <div class="req-meta">${timeAgo(p.created_at)}</div>
+                        </div>
+                        <span class="chip rejected">Rejected</span>
+                    </div>
+                `).join('')
+        }
+        </div>
+    `;
+
+    if (activePlaylistTab === 'accepted' && accepted.length > 0) {
+        initDragDrop();
     }
 }
 
+function switchPlaylistTab(tab) {
+    activePlaylistTab = tab;
+    renderDjLists(allRequests);
+}
+
+function initDragDrop() {
+    const list = document.getElementById('drag-list');
+    if (!list) return;
+
+    let draggedEl = null;
+
+    list.querySelectorAll('.draggable').forEach(card => {
+        card.addEventListener('dragstart', e => {
+            draggedEl = card;
+            card.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        card.addEventListener('dragend', () => {
+            card.classList.remove('dragging');
+            list.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+            saveSortOrder();
+        });
+
+        card.addEventListener('dragover', e => {
+            e.preventDefault();
+            if (card === draggedEl) return;
+            const rect = card.getBoundingClientRect();
+            const mid = rect.top + rect.height / 2;
+            list.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+            card.classList.add('drag-over');
+            if (e.clientY < mid) {
+                list.insertBefore(draggedEl, card);
+            } else {
+                list.insertBefore(draggedEl, card.nextSibling);
+            }
+        });
+    });
+}
+
+async function saveSortOrder() {
+    const list = document.getElementById('drag-list');
+    if (!list) return;
+
+    const cards = [...list.querySelectorAll('.draggable')];
+
+    cards.forEach((card, i) => {
+        card.querySelector('.req-number').textContent = i + 1;
+    });
+
+    await Promise.all(cards.map((card, i) =>
+        supabaseClient.from('requests')
+            .update({ sort_order: i })
+            .eq('id', parseInt(card.dataset.id))
+    ));
+
+    await refreshDjLists();
+}
+
 async function decide(requestId, status) {
+    let updateData = { status };
+
+    if (status === 'accepted') {
+        const accepted = allRequests.filter(r => r.status === 'accepted');
+        updateData.sort_order = accepted.length;
+    }
+
     const { error } = await supabaseClient
-        .from('requests').update({ status }).eq('id', requestId);
+        .from('requests').update(updateData).eq('id', requestId);
     if (!error) await refreshDjLists();
 }
 
