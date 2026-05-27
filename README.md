@@ -9,7 +9,8 @@ create table if not exists parties (
   duration_min    integer not null,
   end_timestamp   bigint not null,
   ended           boolean default false,
-  created_at      timestamptz default now()
+  created_at      timestamptz default now(),
+  dj_token text;
 );
 
 create table if not exists requests (
