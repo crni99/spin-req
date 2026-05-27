@@ -373,6 +373,30 @@ body::before {
     color: var(--accent);
 }
 
+.badge.accent2 {
+    background: rgba(255, 140, 66, 0.15);
+    border-color: rgba(255, 140, 66, 0.3);
+    color: var(--accent2);
+}
+
+.badge.success {
+    background: rgba(46, 204, 113, 0.15);
+    border-color: rgba(46, 204, 113, 0.3);
+    color: var(--success);
+}
+
+.badge.danger {
+    background: rgba(231, 76, 60, 0.15);
+    border-color: rgba(231, 76, 60, 0.3);
+    color: var(--danger);
+}
+
+.badge.warning {
+    background: rgba(243, 156, 18, 0.15);
+    border-color: rgba(243, 156, 18, 0.3);
+    color: var(--warning);
+}
+
 .panel-body {
     padding: 1rem;
 }
