@@ -94,7 +94,6 @@ function renderDjLists(requests) {
     } else {
         pList.innerHTML = pending.map((p, i) => `
             <div class="req-card" id="req-${p.id}" data-id="${p.id}">
-                <div class="req-number">${i + 1}</div>
                 <div class="req-info">
                     <div class="req-song">${esc(p.song)}</div>
                     <div class="req-meta">${timeAgo(p.created_at)}</div>
@@ -125,12 +124,10 @@ function renderDjLists(requests) {
             : `<div class="drag-list" id="drag-list">${accepted.map((p, i) => `
                     <div class="req-card draggable" draggable="true" data-id="${p.id}" data-order="${p.sort_order || i}">
                         <div class="drag-handle">⠿</div>
-                        <div class="req-number">${i + 1}</div>
                         <div class="req-info">
                             <div class="req-song">${esc(p.song)}</div>
                             <div class="req-meta">${timeAgo(p.created_at)}</div>
                         </div>
-                        <span class="chip accepted">Accepted</span>
                     </div>
                 `).join('')}</div>`
         }
@@ -140,12 +137,10 @@ function renderDjLists(requests) {
             ? '<div class="empty"><div class="empty-icon">🚫</div>No rejected songs yet</div>'
             : rejected.map((p, i) => `
                     <div class="req-card">
-                        <div class="req-number">${i + 1}</div>
                         <div class="req-info">
                             <div class="req-song">${esc(p.song)}</div>
                             <div class="req-meta">${timeAgo(p.created_at)}</div>
                         </div>
-                        <span class="chip rejected">Rejected</span>
                     </div>
                 `).join('')
         }
@@ -202,10 +197,6 @@ async function saveSortOrder() {
     if (!list) return;
 
     const cards = [...list.querySelectorAll('.draggable')];
-
-    cards.forEach((card, i) => {
-        card.querySelector('.req-number').textContent = i + 1;
-    });
 
     await Promise.all(cards.map((card, i) =>
         supabaseClient.from('requests')

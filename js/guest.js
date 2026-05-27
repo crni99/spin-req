@@ -62,12 +62,10 @@ function renderGuestAccepted(list) {
 
     el.innerHTML = list.map((p, i) => `
         <div class="req-card">
-            <div class="req-number">${i + 1}</div>
             <div class="req-info">
                 <div class="req-song">${esc(p.song)}</div>
                 <div class="req-meta">${timeAgo(p.created_at)}</div>
             </div>
-            <span class="chip accepted">Accepted</span>
         </div>
     `).join('');
 }
