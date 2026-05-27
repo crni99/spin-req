@@ -93,7 +93,7 @@ function renderDjLists(requests) {
         pList.innerHTML = '<div class="empty"><div class="empty-icon">🎵</div>No requests yet</div>';
     } else {
         pList.innerHTML = pending.map((p, i) => `
-            <div class="req-card" id="req-${p.id}" data-id="${p.id}">
+            <div class="req-card req-card--pending" id="req-${p.id}" data-id="${p.id}">
                 <div class="req-info">
                     <div class="req-song">${esc(p.song)}</div>
                     <div class="req-meta">${timeAgo(p.created_at)}</div>

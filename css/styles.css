@@ -389,6 +389,38 @@ body::before {
     animation: slideIn 0.3s ease;
 }
 
+@media (max-width: 768px) {
+    .req-card--pending {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    .req-card--pending .req-info {
+        width: 100%;
+    }
+
+    .req-card--pending .req-song {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+        font-size: 16px;
+    }
+
+    .req-card--pending .req-actions {
+        display: flex;
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+    .req-card--pending .btn-accept,
+    .req-card--pending .btn-reject {
+        flex: 1;
+        padding: 10px;
+        font-size: 14px;
+    }
+}
+
 @keyframes slideIn {
     from {
         opacity: 0;
