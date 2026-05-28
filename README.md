@@ -178,6 +178,19 @@ alter table public.requests disable row level security;
 alter table public.parties disable row level security;
 
 create index if not exists requests_party_id_idx on public.requests (party_id);
+
+create or replace function update_sort_orders(updates jsonb)
+returns void language plpgsql as $$
+declare
+  item jsonb;
+begin
+  for item in select * from jsonb_array_elements(updates) loop
+    update requests
+    set sort_order = (item->>'sort_order')::int
+    where id = (item->>'id')::bigint;
+  end loop;
+end;
+$$;
 ```
 
 ### Schema Overview

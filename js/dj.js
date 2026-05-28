@@ -50,6 +50,8 @@ async function loadDjView(partyId) {
         return;
     }
 
+    saveDjToken(partyId, urlToken);
+
     currentParty = party;
     showPage('page-dj');
 
@@ -196,13 +198,16 @@ async function saveSortOrder() {
     const list = document.getElementById('drag-list');
     if (!list) return;
 
-    const cards = [...list.querySelectorAll('.draggable')];
+    const updates = [...list.querySelectorAll('.draggable')].map((card, i) => ({
+        id: parseInt(card.dataset.id),
+        sort_order: i
+    }));
 
-    await Promise.all(cards.map((card, i) =>
-        supabaseClient.from('requests')
-            .update({ sort_order: i })
-            .eq('id', parseInt(card.dataset.id))
-    ));
+    const { error } = await supabaseClient.rpc('update_sort_orders', {
+        updates: updates
+    });
+
+    if (error) { toast('Error saving order: ' + error.message, 'error'); return; }
 
     await refreshDjLists();
 }
@@ -240,10 +245,27 @@ async function endParty() {
         .from('parties').update({ ended: true }).eq('id', currentParty.id);
     if (!error) {
         currentParty.ended = true;
-        clearInterval(timerInterval);
-        document.getElementById('dj-timer').textContent = 'ENDED';
-        document.getElementById('dj-timer').className = 'timer-badge ended';
+        showDjEnded()
         toast('The party is over!', 'success');
+    }
+}
+
+function showDjEnded() {
+    clearInterval(timerInterval);
+    const timer = document.getElementById('dj-timer');
+    timer.textContent = 'ENDED';
+    timer.className = 'timer-badge ended';
+    const btnExtend = document.getElementById('btn-extend-party');
+    const btnEnd = document.getElementById('btn-end-party');
+    if (btnExtend) btnExtend.disabled = true;
+    if (btnEnd) btnEnd.disabled = true;
+    if (!document.getElementById('dj-ended-notice')) {
+        const notice = document.createElement('div');
+        notice.id = 'dj-ended-notice';
+        notice.className = 'ended-banner';
+        notice.innerHTML = '🎤 Party is over — no new requests can be accepted.';
+        const layout = document.querySelector('#page-dj .dj-layout');
+        if (layout) layout.insertAdjacentElement('afterbegin', notice);
     }
 }
 

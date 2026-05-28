@@ -44,15 +44,23 @@ function startTimer(elId, party) {
         const diff = end - now;
 
         if (currentParty.ended || diff <= 0) {
-            el.textContent = 'ENDED';
-            el.className = 'timer-badge ended';
             clearInterval(timerInterval);
-            if (isDjTimer && !currentParty.ended) {
-                supabaseClient
-                    .from('parties')
-                    .update({ ended: true })
-                    .eq('id', currentParty.id)
-                    .then(() => { currentParty.ended = true; });
+            if (isDjTimer) {
+                if (!currentParty.ended) {
+                    supabaseClient
+                        .from('parties')
+                        .update({ ended: true })
+                        .eq('id', currentParty.id)
+                        .then(() => {
+                            currentParty.ended = true;
+                            showDjEnded();
+                        });
+                } else {
+                    showDjEnded();
+                }
+            } else {
+                el.textContent = 'ENDED';
+                el.className = 'timer-badge ended';
             }
             return;
         }
@@ -91,7 +99,40 @@ function timeAgo(ts) {
 }
 
 async function getIpHash() {
-    const raw = navigator.userAgent + Intl.DateTimeFormat().resolvedOptions().timeZone + window.screen.width;
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+    function canvasFingerprint() {
+        try {
+            const c = document.createElement('canvas');
+            const ctx = c.getContext('2d');
+            ctx.textBaseline = 'top';
+            ctx.font = '14px Arial';
+            ctx.fillStyle = '#f60';
+            ctx.fillRect(0, 0, 10, 10);
+            ctx.fillStyle = '#069';
+            ctx.fillText('SpinReq\ud83c\udfa7', 2, 2);
+            ctx.strokeStyle = 'rgba(102,204,0,0.7)';
+            ctx.beginPath();
+            ctx.arc(5, 5, 3, 0, Math.PI * 2);
+            ctx.stroke();
+            return c.toDataURL().slice(-80);
+        } catch (e) {
+            return 'no-canvas';
+        }
+    }
+
+    const signals = [
+        navigator.userAgent,
+        navigator.language,
+        (navigator.languages || []).join(','),
+        navigator.hardwareConcurrency || '',
+        navigator.deviceMemory || '',
+        screen.width,
+        screen.height,
+        screen.colorDepth,
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+        new Date().getTimezoneOffset(),
+        canvasFingerprint(),
+    ].join('|');
+
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(signals));
     return Array.from(new Uint8Array(buf)).slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join('');
 }
