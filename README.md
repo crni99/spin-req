@@ -191,6 +191,36 @@ begin
   end loop;
 end;
 $$;
+
+-- Enable Row Level Security
+ALTER TABLE public.parties ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.requests ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for parties table
+CREATE POLICY "Allow read parties" ON public.parties 
+  FOR SELECT USING (true);
+
+CREATE POLICY "Allow insert parties" ON public.parties 
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Allow update parties" ON public.parties 
+  FOR UPDATE USING (true) WITH CHECK (true);
+
+CREATE POLICY "Prevent party deletion" ON public.parties 
+  FOR DELETE USING (false);
+
+-- RLS Policies for requests table
+CREATE POLICY "Allow read requests" ON public.requests 
+  FOR SELECT USING (true);
+
+CREATE POLICY "Allow insert requests" ON public.requests 
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Allow update requests" ON public.requests 
+  FOR UPDATE USING (true) WITH CHECK (true);
+
+CREATE POLICY "Prevent request deletion" ON public.requests 
+  FOR DELETE USING (false);
 ```
 
 ### Schema Overview
