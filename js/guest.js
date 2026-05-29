@@ -1,50 +1,60 @@
 async function loadGuestView(partyId) {
-    const { data: party, error } = await supabaseClient
-        .from('parties').select('*').eq('id', partyId).single();
-    if (error || !party) { toast('Party not found!', 'error'); return; }
+    try {
+        const { data: party, error } = await supabaseClient
+            .from('parties').select('*').eq('id', partyId).single();
+        if (error || !party) { toast('Party not found!', 'error'); return; }
 
-    currentParty = party;
-    showPage('page-guest');
+        currentParty = party;
+        showPage('page-guest');
+        document.getElementById('guest-party-name').textContent = party.name;
+        document.getElementById('guest-dj-name').textContent =
+            party.dj_name ? '🎧 ' + party.dj_name : '';
 
-    document.getElementById('guest-party-name').textContent = party.name;
-    document.getElementById('guest-dj-name').textContent =
-        party.dj_name ? '🎧 ' + party.dj_name : '';
+        if (party.ended || Date.now() > party.end_timestamp) {
+            showGuestEnded();
+        } else {
+            startTimer('guest-timer', party);
+        }
 
-    if (party.ended || Date.now() > party.end_timestamp) {
-        showGuestEnded();
-    } else {
-        startTimer('guest-timer', party);
+        await refreshGuestView();
+        subscribeRealtime(partyId, 'guest');
+        setTimeout(() => {
+            const target = party.ended || Date.now() > party.end_timestamp
+                ? document.getElementById('guest-ended-banner')
+                : document.getElementById('guest-req-form');
+            target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+    } catch (err) {
+        toast('Failed to load party', 'error');
+        console.error('loadGuestView:', err);
     }
-
-    await refreshGuestView();
-    subscribeRealtime(partyId, 'guest');
-    setTimeout(() => {
-        const target = party.ended || Date.now() > party.end_timestamp
-            ? document.getElementById('guest-ended-banner')
-            : document.getElementById('guest-req-form');
-        target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 150);
 }
 
 async function refreshGuestView() {
     if (!currentParty) return;
+    try {
+        const ipHash = await getIpHash();
+        const { count, error: countError } = await supabaseClient
+            .from('requests')
+            .select('*', { count: 'exact', head: true })
+            .eq('party_id', currentParty.id)
+            .eq('ip_hash', ipHash);
+        if (countError) throw countError;
 
-    const ipHash = await getIpHash();
-    const { count } = await supabaseClient
-        .from('requests')
-        .select('*', { count: 'exact', head: true })
-        .eq('party_id', currentParty.id)
-        .eq('ip_hash', ipHash);
+        updateQuota(count || 0);
 
-    updateQuota(count || 0);
+        const { data, error } = await supabaseClient
+            .from('requests').select('*')
+            .eq('party_id', currentParty.id)
+            .eq('status', 'accepted')
+            .order('sort_order', { ascending: true });
+        if (error) throw error;
 
-    const { data } = await supabaseClient
-        .from('requests').select('*')
-        .eq('party_id', currentParty.id)
-        .eq('status', 'accepted')
-        .order('sort_order', { ascending: true });
-
-    renderGuestAccepted(data || []);
+        renderGuestAccepted(data || []);
+    } catch (err) {
+        toast('Failed to refresh view', 'error');
+        console.error('refreshGuestView:', err);
+    }
 }
 
 function renderGuestAccepted(list) {
@@ -70,49 +80,57 @@ function renderGuestAccepted(list) {
     `).join('');
 }
 
+let isSending = false;
+
 async function sendRequest() {
-    if (!currentParty) return;
-    const song = document.getElementById('inp-song').value.trim();
-    if (!song) { toast('Enter the song title!', 'error'); return; }
+    if (!currentParty || isSending) return;
+    isSending = true;
 
-    if (currentParty.ended || Date.now() > currentParty.end_timestamp) {
-        toast('The party is over!', 'error'); return;
-    }
+    try {
+        const song = document.getElementById('inp-song').value.trim();
+        if (song.length < 2) { toast('Song title is too short!', 'error'); return; }
 
-    const btn = document.getElementById('btn-send');
-    btn.disabled = true;
-    const originalHtml = btn.innerHTML;
-    btn.innerHTML = '<span class="spinner"></span>';
+        if (currentParty.ended || Date.now() > currentParty.end_timestamp) {
+            toast('The party is over!', 'error'); return;
+        }
 
-    const ipHash = await getIpHash();
-    const { count } = await supabaseClient
-        .from('requests')
-        .select('*', { count: 'exact', head: true })
-        .eq('party_id', currentParty.id)
-        .eq('ip_hash', ipHash);
+        const btn = document.getElementById('btn-send');
+        btn.disabled = true;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner"></span>';
 
-    if ((count || 0) >= 3) {
-        toast('You have used all 3 requests!', 'error');
+        const ipHash = await getIpHash();
+        const { count } = await supabaseClient
+            .from('requests')
+            .select('*', { count: 'exact', head: true })
+            .eq('party_id', currentParty.id)
+            .eq('ip_hash', ipHash);
+
+        if ((count || 0) >= 3) {
+            toast('You have used all 3 requests!', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            return;
+        }
+
+        const { error } = await supabaseClient.from('requests').insert({
+            party_id: currentParty.id,
+            song,
+            ip_hash: ipHash,
+            status: 'pending'
+        });
+
         btn.disabled = false;
         btn.innerHTML = originalHtml;
-        return;
+
+        if (error) { toast('Error: ' + error.message, 'error'); return; }
+
+        document.getElementById('inp-song').value = '';
+        toast('Request sent! ✓', 'success');
+        await refreshGuestView();
+    } finally {
+        isSending = false;
     }
-
-    const { error } = await supabaseClient.from('requests').insert({
-        party_id: currentParty.id,
-        song,
-        ip_hash: ipHash,
-        status: 'pending'
-    });
-
-    btn.disabled = false;
-    btn.innerHTML = originalHtml;
-
-    if (error) { toast('Error: ' + error.message, 'error'); return; }
-
-    document.getElementById('inp-song').value = '';
-    toast('Request sent! ✓', 'success');
-    await refreshGuestView();
 }
 
 function updateQuota(used) {

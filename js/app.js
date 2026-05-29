@@ -47,7 +47,13 @@ function subscribeRealtime(partyId, role) {
             else startTimer('guest-timer', currentParty);
             if (updated.ended && role === 'guest') showGuestEnded();
         })
-        .subscribe();
+        .subscribe((status, err) => {
+            if (status === 'SUBSCRIBED') return;
+            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                toast('Connection lost. Please refresh the page.', 'error');
+            }
+            if (err) console.error('Realtime error:', err);
+        });
 }
 
 init();

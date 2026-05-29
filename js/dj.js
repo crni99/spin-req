@@ -37,43 +37,50 @@ async function createParty() {
 }
 
 async function loadDjView(partyId) {
-    const { data: party, error } = await supabaseClient
-        .from('parties').select('*').eq('id', partyId).single();
-    if (error || !party) { toast('Party not found!', 'error'); return; }
+    try {
+        const { data: party, error } = await supabaseClient
+            .from('parties').select('*').eq('id', partyId).single();
+        if (error || !party) { toast('Party not found!', 'error'); return; }
 
-    const urlToken = new URLSearchParams(window.location.search).get('token')
-        || getDjToken(partyId);
+        const urlToken = new URLSearchParams(window.location.search).get('token')
+            || getDjToken(partyId);
+        if (!urlToken || party.dj_token !== urlToken) {
+            toast('Access denied!', 'error');
+            showPage('page-landing');
+            return;
+        }
 
-    if (!urlToken || party.dj_token !== urlToken) {
-        toast('Access denied!', 'error');
-        showPage('page-landing');
-        return;
+        saveDjToken(partyId, urlToken);
+        currentParty = party;
+        showPage('page-dj');
+
+        const guestUrl = buildUrl(partyId, false);
+        document.getElementById('dj-link-url').textContent = guestUrl;
+
+        startTimer('dj-timer', party);
+        await refreshDjLists();
+        subscribeRealtime(partyId, 'dj');
+        setTimeout(() => {
+            document.querySelector('#page-dj .dj-layout')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+    } catch (err) {
+        toast('Failed to load DJ view', 'error');
+        console.error('loadDjView:', err);
     }
-
-    saveDjToken(partyId, urlToken);
-
-    currentParty = party;
-    showPage('page-dj');
-
-    const guestUrl = buildUrl(partyId, false);
-    document.getElementById('dj-link-url').textContent = guestUrl;
-
-    startTimer('dj-timer', party);
-    await refreshDjLists();
-    subscribeRealtime(partyId, 'dj');
-    setTimeout(() => {
-        document.querySelector('#page-dj .dj-layout')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 150);
 }
 
 async function refreshDjLists() {
     if (!currentParty) return;
-    const { data } = await supabaseClient
-        .from('requests').select('*').eq('party_id', currentParty.id)
-        .order('created_at', { ascending: true });
-    if (data) {
+    try {
+        const { data, error } = await supabaseClient
+            .from('requests').select('*').eq('party_id', currentParty.id)
+            .order('created_at', { ascending: true });
+        if (error) throw error;
         allRequests = data;
         renderDjLists(data);
+    } catch (err) {
+        toast('Failed to load requests', 'error');
+        console.error('refreshDjLists:', err);
     }
 }
 
@@ -197,56 +204,67 @@ function initDragDrop() {
 async function saveSortOrder() {
     const list = document.getElementById('drag-list');
     if (!list) return;
-
-    const updates = [...list.querySelectorAll('.draggable')].map((card, i) => ({
-        id: parseInt(card.dataset.id),
-        sort_order: i
-    }));
-
-    const { error } = await supabaseClient.rpc('update_sort_orders', {
-        updates: updates
-    });
-
-    if (error) { toast('Error saving order: ' + error.message, 'error'); return; }
-
-    await refreshDjLists();
+    try {
+        const updates = [...list.querySelectorAll('.draggable')].map((card, i) => ({
+            id: parseInt(card.dataset.id),
+            sort_order: i
+        }));
+        const { error } = await supabaseClient.rpc('update_sort_orders', { updates });
+        if (error) throw error;
+        await refreshDjLists();
+    } catch (err) {
+        toast('Error saving order', 'error');
+        console.error('saveSortOrder:', err);
+    }
 }
 
 async function decide(requestId, status) {
-    let updateData = { status };
-
-    if (status === 'accepted') {
-        const accepted = allRequests.filter(r => r.status === 'accepted');
-        updateData.sort_order = accepted.length;
+    try {
+        let updateData = { status };
+        if (status === 'accepted') {
+            const accepted = allRequests.filter(r => r.status === 'accepted');
+            updateData.sort_order = accepted.length;
+        }
+        const { error } = await supabaseClient
+            .from('requests').update(updateData).eq('id', requestId);
+        if (error) throw error;
+        await refreshDjLists();
+    } catch (err) {
+        toast('Failed to update request', 'error');
+        console.error('decide:', err);
     }
-
-    const { error } = await supabaseClient
-        .from('requests').update(updateData).eq('id', requestId);
-    if (!error) await refreshDjLists();
 }
 
 async function extendParty() {
     if (!currentParty) return;
-    const newEnd = currentParty.end_timestamp + 30 * 60 * 1000;
-    const { data, error } = await supabaseClient
-        .from('parties').update({ end_timestamp: newEnd })
-        .eq('id', currentParty.id).select().single();
-    if (!error && data) {
+    try {
+        const newEnd = currentParty.end_timestamp + 30 * 60 * 1000;
+        const { data, error } = await supabaseClient
+            .from('parties').update({ end_timestamp: newEnd })
+            .eq('id', currentParty.id).select().single();
+        if (error) throw error;
         currentParty = data;
         startTimer('dj-timer', data);
         toast('+30 minutes added ✓', 'success');
+    } catch (err) {
+        toast('Failed to extend party', 'error');
+        console.error('extendParty:', err);
     }
 }
 
 async function endParty() {
     if (!currentParty) return;
     if (!confirm('End the party? This cannot be undone.')) return;
-    const { error } = await supabaseClient
-        .from('parties').update({ ended: true }).eq('id', currentParty.id);
-    if (!error) {
+    try {
+        const { error } = await supabaseClient
+            .from('parties').update({ ended: true }).eq('id', currentParty.id);
+        if (error) throw error;
         currentParty.ended = true;
-        showDjEnded()
+        showDjEnded();
         toast('The party is over!', 'success');
+    } catch (err) {
+        toast('Failed to end party', 'error');
+        console.error('endParty:', err);
     }
 }
 
@@ -274,6 +292,12 @@ function exportTxt() {
         toast('Nothing to export yet!', 'error');
         return;
     }
+
+    const sortedRequests = [
+        ...allRequests.filter(r => r.status === 'accepted').sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)),
+        ...allRequests.filter(r => r.status !== 'accepted')
+    ];
+
     const lines = [
         `SpinReq — ${currentParty.name}`,
         currentParty.dj_name ? `DJ: ${currentParty.dj_name}` : '',
@@ -281,7 +305,7 @@ function exportTxt() {
         '',
         '═══════════════════════════════',
         '',
-        ...allRequests.map((p, i) => {
+        ...sortedRequests.map((p, i) => {
             const status = p.status === 'accepted' ? '[ACCEPTED]' :
                 p.status === 'rejected' ? '[REJECTED]' : '[ON HOLD]';
             return `${i + 1}. ${status} ${p.song}`;
