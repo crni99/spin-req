@@ -47,7 +47,7 @@ async function refreshGuestView() {
             .from('requests').select('*')
             .eq('party_id', currentParty.id)
             .eq('status', 'accepted')
-            .order('sort_order', { ascending: true });
+            .order('sort_order', { ascending: false });
         if (error) throw error;
 
         renderGuestAccepted(data || []);

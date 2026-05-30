@@ -164,15 +164,17 @@
         <p>Send a request to the DJ — he decides whether to play it</p>
         <div class="input-row">
           <input type="text" id="inp-song" placeholder="Artist — Song title" maxlength="100" autocomplete="off" />
-          <button class="btn-primary" onclick="sendRequest()" id="btn-send">Send</button>
         </div>
         <div class="quota-info">
-          <div class="quota-dots" id="quota-dots">
-            <div class="quota-dot" id="dot-1"></div>
-            <div class="quota-dot" id="dot-2"></div>
-            <div class="quota-dot" id="dot-3"></div>
+          <div class="quota-info-left">
+            <div class="quota-dots" id="quota-dots">
+              <div class="quota-dot" id="dot-1"></div>
+              <div class="quota-dot" id="dot-2"></div>
+              <div class="quota-dot" id="dot-3"></div>
+            </div>
+            <span id="quota-text">3 requests remaining</span>
           </div>
-          <span id="quota-text">3 requests remaining</span>
+          <button class="btn-primary" onclick="sendRequest()" id="btn-send">Send</button>
         </div>
       </div>
 

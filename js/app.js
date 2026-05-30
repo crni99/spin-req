@@ -18,6 +18,8 @@ function handleRoute() {
     const isDj = params.get('dj') === '1';
 
     if (partyId) {
+        const landing = document.getElementById('page-landing');
+        if (landing) landing.remove();
         if (isDj) loadDjView(partyId);
         else loadGuestView(partyId);
     } else {

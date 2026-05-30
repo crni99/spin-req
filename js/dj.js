@@ -74,7 +74,7 @@ async function refreshDjLists() {
     try {
         const { data, error } = await supabaseClient
             .from('requests').select('*').eq('party_id', currentParty.id)
-            .order('created_at', { ascending: true });
+            .order('created_at', { ascending: false });
         if (error) throw error;
         allRequests = data;
         renderDjLists(data);
@@ -89,7 +89,7 @@ let activePlaylistTab = 'accepted';
 function renderDjLists(requests) {
     const pending = requests.filter(p => p.status === 'pending');
     const accepted = requests.filter(p => p.status === 'accepted')
-        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+        .sort((a, b) => (b.sort_order || 0) - (a.sort_order || 0));
     const rejected = requests.filter(p => p.status === 'rejected')
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
