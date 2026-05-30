@@ -30,7 +30,7 @@ SpinReq is a **real-time DJ song request platform** built as a pure static web a
         </a>
       </td>
       <td>
-        <a href="https://YOUR_USERNAME.github.io/spin-req/">
+        <a href="https://crni99.github.io/spin-req/">
           <b>Launch SpinReq 🡥</b>
         </a>
       </td>
@@ -161,7 +161,10 @@ create table if not exists parties (
   end_timestamp   bigint not null,
   ended           boolean default false,
   created_at      timestamptz default now(),
-  dj_token        text
+  dj_token        text,
+  top_song_1      text,
+  top_song_2      text,
+  top_song_3      text
 );
 
 create table if not exists requests (

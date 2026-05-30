@@ -3,6 +3,10 @@ async function createParty() {
     const djName = document.getElementById('inp-dj').value.trim();
     const duration = parseInt(document.getElementById('inp-duration').value);
 
+    const top1 = document.getElementById('inp-top1').value.trim();
+    const top2 = document.getElementById('inp-top2').value.trim();
+    const top3 = document.getElementById('inp-top3').value.trim();
+
     if (!name) { showCreateError('Enter the name of the party!'); return; }
 
     const btn = document.getElementById('btn-create');
@@ -18,7 +22,10 @@ async function createParty() {
         duration_min: duration,
         end_timestamp: endTs,
         ended: false,
-        dj_token: djToken
+        dj_token: djToken,
+        top_song_1: top1 || null,
+        top_song_2: top2 || null,
+        top_song_3: top3 || null
     });
 
     btn.disabled = false;
@@ -277,14 +284,52 @@ function showDjEnded() {
     const btnEnd = document.getElementById('btn-end-party');
     if (btnExtend) btnExtend.disabled = true;
     if (btnEnd) btnEnd.disabled = true;
-    if (!document.getElementById('dj-ended-notice')) {
-        const notice = document.createElement('div');
-        notice.id = 'dj-ended-notice';
-        notice.className = 'ended-banner';
-        notice.innerHTML = '🎤 Party is over — no new requests can be accepted.';
-        const layout = document.querySelector('#page-dj .dj-layout');
-        if (layout) layout.insertAdjacentElement('afterbegin', notice);
+}
+
+function buildExportText() {
+    const accepted = allRequests.filter(r => r.status === 'accepted').sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    const rejected = allRequests.filter(r => r.status === 'rejected');
+
+    const lines = [
+        `SpinReq — ${currentParty.name}`,
+        currentParty.dj_name ? `DJ: ${currentParty.dj_name}` : '',
+        `Date: ${new Date().toLocaleDateString('en-US')}`,
+        '',
+    ];
+
+    if (accepted.length) {
+        lines.push('ACCEPTED:');
+        accepted.forEach(r => lines.push(`${r.song}`));
+        lines.push('');
     }
+
+    if (rejected.length) {
+        lines.push('REJECTED:');
+        rejected.forEach(r => lines.push(`${r.song}`));
+        lines.push('');
+    }
+
+    lines.push(`Total: ${allRequests.length} requests`);
+    lines.push(`Accepted: ${accepted.length}`);
+    lines.push(`Rejected: ${rejected.length}`);
+
+    return lines.filter(l => l !== undefined).join('\n');
+}
+
+function toggleExportMenu(e) {
+    e.stopPropagation();
+    const menu = document.getElementById('export-menu');
+    menu.classList.toggle('open');
+    const close = () => { menu.classList.remove('open'); document.removeEventListener('click', close); };
+    if (menu.classList.contains('open')) document.addEventListener('click', close);
+}
+
+function exportClipboard() {
+    if (!currentParty || allRequests.length === 0) { toast('Nothing to export yet!', 'error'); return; }
+    navigator.clipboard.writeText(buildExportText())
+        .then(() => toast('Copied to clipboard ✓', 'success'))
+        .catch(() => toast('Could not copy', 'error'));
+    document.getElementById('export-menu').classList.remove('open');
 }
 
 function exportTxt() {
@@ -292,36 +337,12 @@ function exportTxt() {
         toast('Nothing to export yet!', 'error');
         return;
     }
-
-    const sortedRequests = [
-        ...allRequests.filter(r => r.status === 'accepted').sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)),
-        ...allRequests.filter(r => r.status !== 'accepted')
-    ];
-
-    const lines = [
-        `SpinReq — ${currentParty.name}`,
-        currentParty.dj_name ? `DJ: ${currentParty.dj_name}` : '',
-        `Date: ${new Date().toLocaleDateString('en-US')}`,
-        '',
-        '═══════════════════════════════',
-        '',
-        ...sortedRequests.map((p, i) => {
-            const status = p.status === 'accepted' ? '[ACCEPTED]' :
-                p.status === 'rejected' ? '[REJECTED]' : '[ON HOLD]';
-            return `${i + 1}. ${status} ${p.song}`;
-        }),
-        '',
-        '═══════════════════════════════',
-        `Total: ${allRequests.length} requests`,
-        `Accepted: ${allRequests.filter(p => p.status === 'accepted').length}`,
-        `Rejected: ${allRequests.filter(p => p.status === 'rejected').length}`,
-    ].filter(l => l !== undefined).join('\n');
-
-    const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' });
+    const blob = new Blob([buildExportText()], { type: 'text/plain;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `spinreq-${currentParty.name.replace(/\s+/g, '_')}.txt`;
     a.click();
+    document.getElementById('export-menu').classList.remove('open');
 }
 
 function copyLink() {

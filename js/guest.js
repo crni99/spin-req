@@ -10,6 +10,16 @@ async function loadGuestView(partyId) {
         document.getElementById('guest-dj-name').textContent =
             party.dj_name ? '🎧 ' + party.dj_name : '';
 
+        const topSongs = [party.top_song_1, party.top_song_2, party.top_song_3].filter(Boolean);
+        const fab = document.getElementById('btn-top-songs');
+        if (topSongs.length > 0) {
+            fab.style.display = 'flex';
+            document.getElementById('top-songs-list').innerHTML =
+                topSongs.map(s => `<div class="top-song-item">${esc(s)}</div>`).join('');
+        } else {
+            fab.style.display = 'none';
+        }
+
         if (party.ended || Date.now() > party.end_timestamp) {
             showGuestEnded();
         } else {
@@ -146,6 +156,13 @@ function updateQuota(used) {
         document.getElementById('btn-send').disabled = true;
         document.getElementById('inp-song').disabled = true;
     }
+}
+
+function openTopSongs() {
+    document.getElementById('modal-top-songs').classList.add('open');
+}
+function closeTopSongs() {
+    document.getElementById('modal-top-songs').classList.remove('open');
 }
 
 function showGuestEnded() {

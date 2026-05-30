@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SpinReq — DJ Request App</title>
-  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
@@ -76,6 +76,14 @@
           <option value="360">6 hours</option>
         </select>
       </div>
+      <div class="form-group">
+        <label>Top 3 songs tonight (optional)</label>
+        <input type="text" id="inp-top1" placeholder="1. Artist — Song" maxlength="100" autocomplete="off"
+          style="margin-bottom:0.5rem;" />
+        <input type="text" id="inp-top2" placeholder="2. Artist — Song" maxlength="100" autocomplete="off"
+          style="margin-bottom:0.5rem;" />
+        <input type="text" id="inp-top3" placeholder="3. Artist — Song" maxlength="100" autocomplete="off" />
+      </div>
       <button class="btn-primary" style="width:100%" onclick="createParty()" id="btn-create">
         🎉 Create party
       </button>
@@ -100,7 +108,13 @@
         </div>
         <button class="btn-primary" onclick="extendParty()" id="btn-extend-party">+30 min</button>
         <button class="btn-secondary" onclick="endParty()" id="btn-end-party">End party</button>
-        <button class="btn-secondary" onclick="exportTxt()">📋 Export TXT</button>
+        <div class="export-dropdown" id="export-dropdown">
+          <button class="btn-secondary" onclick="toggleExportMenu(event)">📋 Export TXT ▾</button>
+          <div class="export-menu" id="export-menu">
+            <button onclick="exportClipboard()">📱 Copy to clipboard</button>
+            <button onclick="exportTxt()">💾 Download .txt</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -193,6 +207,18 @@
         </div>
       </div>
     </div>
+
+    <button class="fab-fire" id="btn-top-songs" onclick="openTopSongs()">
+      <img src="images/fire.svg" alt="fire" />
+    </button>
+    <div class="modal-overlay" id="modal-top-songs">
+      <div class="modal">
+        <button class="modal-close" onclick="closeTopSongs()">✕</button>
+        <h2>🔥 Top songs tonight</h2>
+        <div id="top-songs-list" class="top-songs-list"></div>
+      </div>
+    </div>
+
   </div>
 
   <div id="toast"></div>
